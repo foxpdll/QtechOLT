@@ -1,0 +1,53 @@
+#!/usr/bin/env python
+# -*- coding: UTF8 -*-
+
+import telnetlib
+import sys,cgi
+
+print "Content-type: text/html"
+print
+print "<HTML>"
+print "<HEAD>"
+print "</HEAD>"
+print "<body>"
+print """
+<form>
+    <input type="text" name=mac value="">
+    <input type="submit" value="Сбросить">
+</form>
+
+<form>
+</form>
+"""
+arguments = cgi.FieldStorage()
+mac=""
+for i in arguments.keys():
+    if i=="mac": 
+	mac=arguments[i].value
+	mac=mac.strip().lower()
+	print mac
+if mac:
+#mac="ac:9e:17:8c:ec:e0"
+    tn=telnetlib.Telnet("172.16.99.7")
+    tn.read_until("login:")
+    tn.write("user\n")
+    tn.read_until("Password:")
+    tn.write("password\n")
+    tn.read_until(">")
+    tn.write("en\n")
+    tn.read_until("Password:")
+    tn.write("password\n")
+    tn.read_until("#")
+    tn.write("show subscribers active all | grep options -A3 %s | grep options -A0 Circuit | grep vlan-id \n"%(mac))
+    txt=tn.read_until("#")
+    txt=txt[txt.find("3/3"):]
+    vlan=txt.split()[2]
+    circ=txt.split()[4]
+    tn.write("clear subscriber session 3/3 vlan-id %s clips %s\n"%(vlan,circ))
+    tn.read_until("#")
+    tn.write("exit\n")
+    tn.read_until("#")
+    tn.write("exit\n")
+
+print "</body>"
+print "</html>"

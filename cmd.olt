@@ -1,0 +1,10 @@
+configure terminal
+no gvrp
+interface range ethernet 0/1 to ethernet 0/16
+no gvrp
+interface range ethernet 1/1 to ethernet 1/2
+no gvrp
+exit
+exit
+exit
+exit

@@ -1,0 +1,197 @@
+#!/usr/bin/env python
+# -*- coding: UTF8 -*-
+#---------------------------------------------------------------------------------------------------------------------------------------
+
+import telnetlib
+import sys
+from qtech import OLT,SW
+import cgi
+switces=(15,17,33,41,49,211,220)
+olts=(191,190,197,195,193,192,106,107,109,110,112,115,119,120,122,126,186,129,189,130,133,183,136,137,188,140,152,154,155,158)
+print "Content-type: text/html"
+print
+print "<HTML>"
+print "<HEAD>"
+print "</HEAD>"
+print "<body>"
+print """<form>
+    Vlan:<input type="text" name=vlan value=""><br>
+    IP:<input type="text" name=ip value=""><br>
+    Descr:<input type="text" name=descr value=""><br>
+    <input type="submit" value="Создать">
+</form>"""
+arguments = cgi.FieldStorage()
+for i in arguments.keys():
+    if i=="vlan": vlanid=arguments[i].value
+    if i=="descr": vlandescr=arguments[i].value
+    if i=="ip": userip=arguments[i].value
+try:
+    print vlanid,vlandescr,userip
+    cmd="adduser"
+except:
+    try:
+	cmd=sys.argv[1]
+    except:
+	print "Usage: "+sys.argv[0]+" saveconf"
+	print "Usage: "+sys.argv[0]+" addvlan vlan vlandescr"
+	print "Usage: "+sys.argv[0]+" adduser vlan vlandescr 185.23.82.XXX"
+	print "Usage: "+sys.argv[0]+" deluser vlan vlandescr"
+	print "Usage: "+sys.argv[0]+" runswcmd"
+	print "Usage: "+sys.argv[0]+" runoltcmd"
+
+try:
+    if cmd=="runoltcmd":
+	for i in olts:
+	    print i
+	    olt=OLT("172.16.199."+str(i),"user","password",0)
+	    f=open("cmd.olt","r")
+	    while 1:
+		line = f.readline()
+		if not line: break
+		print line
+		print olt.runCMD(line+"\n")
+	    f.close()
+    if cmd=="runswcmd":
+	for i in switces:
+	    print i
+	    sw=SW("172.16.99."+str(i),"user","password",0)
+	    f=open("cmd.sw","r")
+	    while 1:
+		line = f.readline()
+		if not line: break
+		print line
+		print sw.runCMD(line)
+	    f.close()
+    if cmd=="addvlan":
+	vlanid = sys.argv[2]
+	vlandescr = sys.argv[3]
+	print "addvlan",vlanid,vlandescr
+	for i in switces:
+	    print i
+	    sw=SW("172.16.99."+str(i),"user","password",0)
+	    sw.createVlan(vlanid,vlandescr)
+	for i in olts:
+	    print i
+	    try:
+		o=OLT("172.16.199."+str(i),"user","password",0)
+		o.createVlan(vlanid,vlandescr)
+	    except: "Error"
+    if cmd=="saveconf":
+	for i in switces:
+	    print i
+	    try:
+		sw=SW("172.16.99."+str(i),"user","password",0)
+		sw.saveConf()
+	    except: pass
+	for i in olts:
+	    print i
+	    try:
+		o=OLT("172.16.199."+str(i),"user","password",0)
+		o.saveConf()
+	    except: pass
+    if cmd=="deluser":
+	vlanid=sys.argv[2]
+	vlandescr=sys.argv[3]
+	print vlanid,vlandescr
+	tn=telnetlib.Telnet("172.16.99.7")
+	print tn.read_until("login:")
+	tn.write("user\n")
+	print tn.read_until("Password:")
+	tn.write("password\n")
+	print tn.read_until(">")
+	tn.write("en\n")
+	print tn.read_until("Password:")
+	tn.write("password\n")
+	print tn.read_until("#")
+	tn.write("configure\n")
+	print tn.read_until("#")
+	tn.write("port ethernet 3/3\n")
+	print tn.read_until("#")
+	tn.write("no dot1q pvc "+str(vlanid)+"\n")
+	print tn.read_until("#")
+	tn.write("exit\n")
+	print tn.read_until("#")
+	tn.write("context sCLIPS\n")
+	print tn.read_until("#")
+	tn.write("no subscriber name "+str(vlandescr)+"\n")
+	print tn.read_until("#")
+	tn.write("exit\n")
+	print tn.read_until("#")
+	tn.write("exit\n")
+	print tn.read_until("#")
+	tn.write("save configuration\n")
+	print tn.read_until("overwrite?")
+	tn.write("y\n")
+	print tn.read_until("#")
+	tn.write("exit\n")
+    if cmd=="adduser":
+	if not vlanid: vlanid=sys.argv[2]
+	if not vlandescr: vlandescr=sys.argv[3]
+	if not userip: userip=sys.argv[4]
+	print vlanid,vlandescr,userip
+	tn=telnetlib.Telnet("172.16.99.7")
+	print tn.read_until("login:")
+	tn.write("user\n")
+	print tn.read_until("Password:")
+	tn.write("password\n")
+	print tn.read_until(">")
+	tn.write("en\n")
+	print tn.read_until("Password:")
+	tn.write("password\n")
+	print tn.read_until("#")
+	tn.write("configure\n")
+	print tn.read_until("#")
+	tn.write("context sCLIPS\n")
+	print tn.read_until("#")
+	tn.write("subscriber name "+str(vlandescr)+"\n")
+	print tn.read_until("#")
+	tn.write("ip address 185.23.82."+str(userip)+"\n")
+	print tn.read_until("#")
+	tn.write("commit\n")
+	print tn.read_until("#")
+	tn.write("exit\n")
+	print tn.read_until("#")
+	tn.write("exit\n")
+	print tn.read_until("#")
+	tn.write("port ethernet 3/3\n")
+	print tn.read_until("#")
+	tn.write("dot1q pvc "+str(vlanid)+"\n")
+	print tn.read_until("#")
+	tn.write("bind subscriber "+str(vlandescr)+"@sCLIPS\n")
+	print tn.read_until("#")
+	tn.write("service clips\n")
+	print tn.read_until("#")
+	tn.write("exit\n")
+	print tn.read_until("#")
+	tn.write("exit\n")
+	print tn.read_until("#")
+	tn.write("exit\n")
+	print tn.read_until("#")
+	tn.write("save configuration\n")
+	print tn.read_until("overwrite?")
+	tn.write("y\n")
+	print tn.read_until("#")
+	tn.write("exit\n")
+	for i in switces:
+	    try:
+		print i
+		sw=SW("172.16.99."+str(i),"user","password",0)
+		sw.createVlan(vlanid,vlandescr)
+	    except: pass
+	for i in olts:
+	    try:
+		print i
+		o=OLT("172.16.199."+str(i),"user","password",0)
+		o.createVlan(vlanid,vlandescr)
+	    except: pass
+    print "</body>"
+    print "</html>"
+except:
+    print "</body>"
+    print "</html>"
+
+
+
+
+#o=OLT("172.16.199.119","admin","password",0)
+#print o.runCMD("show ont brief\n")

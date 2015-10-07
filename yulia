@@ -1,0 +1,63 @@
+#!/usr/bin/env python
+# -*- coding: UTF8 -*-
+
+from qtech import dbfile
+import sqlite3
+
+print "Content-type: text/html"
+print
+print "<HTML>"
+print "<HEAD>"
+print '<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>'
+print "</HEAD>"
+print "<body>"
+
+con = sqlite3.connect(dbfile+".old")
+c = con.cursor()
+print "<h1>Таблица проблемных ONT</h1>"
+print "<table border=1>"
+print "<tr><th>N</th><th>N Недели</th><th>Дата первого включения</th><th>Ку</th><th>SerialN</th><th>PortN</th><th>Status</th><th>LastError</th><th>RSSI</th><th>Temp</th><th>Uptime</th><th>Distance</th><th>Description</th><th>SWVersion</th></tr>"
+j=0
+for i in c.execute("""select 
+    strftime('%W',min(dt)),
+    min(dt),
+    ip,
+    sn,
+    num,
+    status,
+    error,
+    rssi,
+    temp,
+    uptime,
+    distance,
+    descr,
+    swversion
+from 
+    ONT
+group by sn
+order by 1 desc,2 desc;"""):
+    j=j+1
+    if int(i[0])%2 == 1:
+	color="Yellow"
+    else:
+	color="Pink"
+    print "<tr bgcolor=%s>"%(color)
+    print "<td>%s</td>"%(j)
+    print "<td>%s</td>"%(str(i[0]))
+    print "<td>%s</td>"%(str(i[1]))
+    print "<td>%s</td>"%(str(i[2]))
+    print "<td>%s</td>"%(str(i[3]))
+    print "<td>%s</td>"%(str(i[4]))
+    print "<td>%s</td>"%(str(i[5]))
+    print "<td>%s</td>"%(str(i[6]))
+    print "<td>%s</td>"%(str(i[7]))
+    print "<td>%s</td>"%(str(i[8]))
+    print "<td>%s</td>"%(str(i[9]))
+    print "<td>%s</td>"%(str(i[10]))
+    print "<td>%s</td>"%(str(i[11]))
+    print "<td>%s</td>"%(str(i[12]))
+    print "</tr>"
+print "</table>"
+
+print "</body>"
+print "</html>"
